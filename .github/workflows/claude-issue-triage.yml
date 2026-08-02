@@ -1,0 +1,109 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+# Un solo triage vivo por issue: si el issue se edita varias veces seguidas,
+# cancela el analisis anterior en lugar de comentar dos veces.
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    # No re-disparar sobre issues creados/editados por bots (evita bucles).
+    if: ${{ !endsWith(github.event.issue.user.login, '[bot]') && github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage con Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh api:*),Read,Grep,Glob"'
+          prompt: |
+            Sos el triador de issues del repositorio ${{ github.repository }}, un Tetris en
+            JavaScript vanilla con HTML5 Canvas (index.html, style.css, game.js — sin build,
+            sin dependencias, sin tests). Lee CLAUDE.md para entender la arquitectura antes
+            de diagnosticar.
+
+            Trabajá sobre el issue #${{ github.event.issue.number }}.
+
+            ## Paso 1 — Leer
+            - `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json title,body,labels,comments`
+            - `gh label list --repo ${{ github.repository }} --limit 100`
+            - Leé los archivos del repo que el issue toque (game.js, index.html, style.css, CLAUDE.md).
+
+            ## Paso 2 — Etiquetar
+            Asigná las labels apropiadas con:
+            `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "a,b,c"`
+
+            Reglas:
+            - Usá SOLO labels que ya existan en el repo (las viste en `gh label list`). Si
+              ninguna encaja, no inventes: mencionalo en el diagnostico.
+            - Elegí exactamente un label de tipo (bug / enhancement / documentation /
+              question / invalid), y opcionalmente uno de area (area:render, area:gameplay,
+              area:input, area:score, area:ui) y uno de prioridad (priority:high /
+              priority:medium / priority:low) y uno de esfuerzo (effort:s / effort:m / effort:l).
+            - No quites labels que haya puesto una persona. Solo agregá.
+            - Si el issue ya tiene las labels correctas, no hagas nada en este paso.
+
+            ## Paso 3 — Diagnostico
+            Publicá UN comentario con `gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body-file <archivo>`
+            usando exactamente esta plantilla en español:
+
+            ```markdown
+            ## 🔍 Diagnostico automatico
+
+            **Tipo:** <bug | mejora | documentacion | pregunta | no reproducible>
+            **Labels aplicadas:** <lista>
+
+            ### Resumen
+            <2-3 frases: que pide o que falla el issue, en tus palabras>
+
+            ### Zona del codigo afectada
+            | Archivo | Simbolo / lineas | Por que |
+            |---|---|---|
+            | game.js | `funcion()` L120-138 | ... |
+
+            ### Causa probable
+            <Para bugs: mecanismo concreto del fallo, citando codigo real que leiste.
+            Para mejoras: que hay hoy y que falta. Si no podes determinarla con el
+            codigo a la vista, decilo explicitamente en vez de adivinar.>
+
+            ### Enfoque de solucion propuesto
+            1. <paso concreto sobre archivo/funcion real>
+            2. <...>
+
+            ### Riesgos y efectos colaterales
+            - <invariantes de CLAUDE.md que se pueden romper: alineacion PIECES/COLORS,
+              dimensiones hardcodeadas del canvas, un solo animId vivo, etc.>
+
+            ### Informacion faltante
+            - <que necesitamos que aclare quien reporto; omitir la seccion si no falta nada>
+
+            ---
+            <sub>Generado por Claude. Revisar antes de implementar.</sub>
+            ```
+
+            ## Reglas duras
+            - NUNCA edites el titulo ni el cuerpo del issue (dispararia este workflow de nuevo).
+            - NO escribas ni modifiques codigo, NO crees ramas ni PRs. Esto es solo analisis.
+            - Si ya existe un comentario de diagnostico automatico previo y el issue fue
+              editado, publicá uno nuevo que empiece con
+              `## 🔍 Diagnostico automatico (actualizado)` y aclará en una linea que cambio.
+            - Basá el diagnostico en codigo que hayas leido de verdad. No inventes nombres
+              de funciones ni numeros de linea.
