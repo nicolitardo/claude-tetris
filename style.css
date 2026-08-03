@@ -21,6 +21,12 @@
   --restart-bg: #7aa2f7;
   --restart-color: #0f0f17;
   --restart-hover-bg: #9bbdff;
+  --menu-title-color: #7aa2f7;
+  --menu-btn-bg: #22223a;
+  --menu-btn-hover-bg: #2e2e4e;
+  --menu-btn-color: #e0e0e0;
+  --menu-panel-bg: rgba(26, 26, 37, 0.9);
+  --menu-border: #3a3a5a;
 }
 
 body.light {
@@ -40,6 +46,12 @@ body.light {
   --restart-bg: #3b5bdb;
   --restart-color: #ffffff;
   --restart-hover-bg: #5c7ce0;
+  --menu-title-color: #3b5bdb;
+  --menu-btn-bg: #e4e4ee;
+  --menu-btn-hover-bg: #d3d3e4;
+  --menu-btn-color: #1a1a25;
+  --menu-panel-bg: rgba(255, 255, 255, 0.92);
+  --menu-border: #c8c8d8;
 }
 
 body {
@@ -237,4 +249,130 @@ kbd {
 
 #restart-btn:hover {
   background: var(--restart-hover-bg);
+}
+
+/* ---- Menú de pausa ---- */
+.panel-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+#pause-panel {
+  width: 260px;
+  padding: 20px 18px;
+  background: var(--menu-panel-bg);
+  border: 1px solid var(--menu-border);
+  border-radius: 8px;
+}
+
+.menu-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: var(--menu-title-color);
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.menu-btn {
+  width: 100%;
+  background: var(--menu-btn-bg);
+  color: var(--menu-btn-color);
+  border: 1px solid var(--menu-border);
+  border-radius: 6px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menu-btn:hover {
+  background: var(--menu-btn-hover-bg);
+}
+
+.menu-btn:focus-visible {
+  outline: 2px solid var(--value-color);
+  outline-offset: 2px;
+}
+
+#resume-btn {
+  background: var(--restart-bg);
+  color: var(--restart-color);
+  border-color: transparent;
+}
+
+#resume-btn:hover {
+  background: var(--restart-hover-bg);
+}
+
+.menu-controls {
+  width: 100%;
+  border-top: 1px solid var(--menu-border);
+  border-bottom: 1px solid var(--menu-border);
+  padding: 10px 0;
+}
+
+.menu-controls ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-controls li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--controls-color);
+}
+
+.menu-controls li span {
+  margin-left: 4px;
+}
+
+.menu-field {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-field label {
+  font-size: 12px;
+  color: var(--controls-color);
+  font-weight: 600;
+}
+
+#start-level {
+  background: var(--menu-btn-bg);
+  color: var(--menu-btn-color);
+  border: 1px solid var(--menu-border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.menu-note {
+  font-size: 10px;
+  color: var(--label-color);
+  text-align: center;
+}
+
+/* Debe ir al final: gana por orden a las reglas que fijan `display` arriba. */
+.hidden {
+  display: none;
 }

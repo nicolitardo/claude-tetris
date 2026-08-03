@@ -48,10 +48,23 @@ Quirk conocido: `endGame()` cancela el frame actual, pero se invoca desde `spawn
 
 ### Puntuación y nivel
 
-`LINE_SCORES = [0,100,300,500,800]` indexado por líneas eliminadas, multiplicado por el nivel **anterior** (`clearLines()` puntúa antes de recalcular `level`). Hard drop suma 2 por celda, soft drop 1 por fila. `level = floor(lines/10) + 1`, `dropInterval = max(100, 1000 - (level-1)*90)`.
+`LINE_SCORES = [0,100,300,500,800]` indexado por líneas eliminadas, multiplicado por el nivel **anterior** (`clearLines()` puntúa antes de recalcular `level`). Hard drop suma 2 por celda, soft drop 1 por fila. `level = startLevel + floor(lines/10)`, `dropInterval = dropIntervalFor(level) = max(100, 1000 - (level-1)*90)`.
+
+`startLevel` (1..`MAX_START_LEVEL`) lo elige el usuario en el menú de pausa y persiste en `localStorage` bajo `tetris-start-level`. Solo se aplica en `init()`, o sea en la **próxima** partida: cambiarlo con la partida pausada no altera la velocidad actual.
 
 `clearLines()` recorre de abajo arriba con `splice` + `unshift` y compensa con `r++` tras eliminar una fila, porque el array se desplaza bajo el índice.
 
 ### DOM
 
-Todos los nodos se capturan una vez al cargar mediante `getElementById`. `updateHUD()` es el único que escribe en el HUD y se llama al final de cada `keydown` además de en `clearLines()`. El overlay se muestra/oculta con la clase `hidden`; su texto lo fijan `endGame()` y `togglePause()`.
+Todos los nodos se capturan una vez al cargar mediante `getElementById`. `updateHUD()` es el único que escribe en el HUD y se llama al final de cada `keydown` además de en `clearLines()`.
+
+El overlay contiene **dos paneles excluyentes**: `#gameover-panel` y `#pause-panel`. `showPanel(panel)` muestra uno y esconde el otro; `hideOverlay()` los esconde todos junto con el overlay. Todo se controla con la clase `hidden`, cuya regla genérica `.hidden { display: none }` está **al final de `style.css` a propósito**: tiene la misma especificidad que las reglas que fijan `display: flex` (`.overlay`, `.panel-box`) y solo gana por orden de cascada. Moverla hacia arriba rompe el ocultado.
+
+### Menú de pausa
+
+`P` o `Escape` llaman a `togglePause()`, que delega en `pauseGame()` / `resumeGame()`. El menú ofrece Reanudar, Reiniciar (`init()`), Ver controles (despliegue in-situ vía `toggleMenuControls()`) y el selector de nivel inicial.
+
+Dos detalles no obvios:
+
+- `resumeGame()` e `init()` hacen `document.activeElement.blur()`. Sin eso el botón del menú queda enfocado y la siguiente pulsación de `Space` (hard drop) volvería a activarlo.
+- El handler de `keydown` descarta las teclas de `GAME_KEYS` mientras `paused || gameOver`, y además hace `preventDefault()` **solo si el evento no viene de dentro del overlay**, para no romper la navegación nativa por teclado de los botones y del `<select>`.

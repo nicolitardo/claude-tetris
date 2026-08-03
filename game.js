@@ -33,6 +33,11 @@ const LINE_SCORES = [0, 100, 300, 500, 800];
 const GRID_COLORS = { dark: '#22222e', light: '#c8c8d8' };
 const THEME_KEY = 'tetris-theme';
 
+const MAX_START_LEVEL = 15;
+const START_LEVEL_KEY = 'tetris-start-level';
+// Teclas que el juego consume; se bloquean mientras el menú está abierto.
+const GAME_KEYS = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyX'];
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -45,15 +50,27 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggle = document.getElementById('theme-toggle');
+const gameoverPanel = document.getElementById('gameover-panel');
+const pausePanel = document.getElementById('pause-panel');
+const resumeBtn = document.getElementById('resume-btn');
+const menuRestartBtn = document.getElementById('menu-restart-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const menuControls = document.getElementById('menu-controls');
+const startLevelSelect = document.getElementById('start-level');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let theme = 'dark';
+let startLevel = 1;
 
 function applyTheme(t) {
   theme = t;
   document.body.classList.toggle('light', t === 'light');
   themeToggle.checked = t === 'light';
   localStorage.setItem(THEME_KEY, t);
+}
+
+function dropIntervalFor(lv) {
+  return Math.max(100, 1000 - (lv - 1) * 90);
 }
 
 function createBoard() {
@@ -120,8 +137,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = startLevel + Math.floor(lines / 10);
+    dropInterval = dropIntervalFor(level);
     updateHUD();
   }
 }
@@ -234,27 +251,59 @@ function drawNext() {
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
 }
 
+function hideOverlay() {
+  overlay.classList.add('hidden');
+  gameoverPanel.classList.add('hidden');
+  pausePanel.classList.add('hidden');
+}
+
+function showPanel(panel) {
+  gameoverPanel.classList.toggle('hidden', panel !== gameoverPanel);
+  pausePanel.classList.toggle('hidden', panel !== pausePanel);
+  overlay.classList.remove('hidden');
+}
+
+function toggleMenuControls(show) {
+  const visible = show ?? menuControls.classList.contains('hidden');
+  menuControls.classList.toggle('hidden', !visible);
+  controlsBtn.textContent = visible ? 'Ocultar controles' : 'Ver controles';
+  controlsBtn.setAttribute('aria-expanded', String(visible));
+}
+
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
   drawBoardOnly();
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
-  overlay.classList.remove('hidden');
+  showPanel(gameoverPanel);
+}
+
+function pauseGame() {
+  if (gameOver || paused) return;
+  paused = true;
+  cancelAnimationFrame(animId);
+  toggleMenuControls(false);
+  startLevelSelect.value = String(startLevel);
+  showPanel(pausePanel);
+  resumeBtn.focus();
+}
+
+function resumeGame() {
+  if (gameOver || !paused) return;
+  paused = false;
+  hideOverlay();
+  // Sin blur, la tecla Space del juego reactivaría el botón que quedó enfocado.
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  lastTime = performance.now();
+  dropAccum = 0;
+  loop(lastTime);
 }
 
 function togglePause() {
   if (gameOver) return;
-  paused = !paused;
-  if (!paused) {
-    lastTime = performance.now();
-    loop(lastTime);
-  } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
-  }
+  if (paused) resumeGame();
+  else pauseGame();
 }
 
 function loop(ts) {
@@ -280,23 +329,49 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = dropIntervalFor(level);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
-  overlay.classList.add('hidden');
+  hideOverlay();
+  // Evita que la tecla Space reactive el botón del menú que quedó enfocado.
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
+function setStartLevel(lv) {
+  startLevel = Math.min(MAX_START_LEVEL, Math.max(1, lv | 0));
+  startLevelSelect.value = String(startLevel);
+  localStorage.setItem(START_LEVEL_KEY, String(startLevel));
+}
+
+function buildStartLevelOptions() {
+  for (let lv = 1; lv <= MAX_START_LEVEL; lv++) {
+    const opt = document.createElement('option');
+    opt.value = String(lv);
+    opt.textContent = String(lv);
+    startLevelSelect.appendChild(opt);
+  }
+}
+
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    e.preventDefault();
+    togglePause();
+    return;
+  }
+  if (paused || gameOver) {
+    // Menú abierto: se descartan las teclas del juego para no mover la pieza al volver.
+    // Los controles del propio menú (botones, select) conservan su comportamiento nativo.
+    if (GAME_KEYS.includes(e.code) && !overlay.contains(e.target)) e.preventDefault();
+    return;
+  }
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -320,11 +395,20 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+menuRestartBtn.addEventListener('click', init);
+resumeBtn.addEventListener('click', resumeGame);
+controlsBtn.addEventListener('click', () => toggleMenuControls());
+
+startLevelSelect.addEventListener('change', () => {
+  setStartLevel(Number(startLevelSelect.value));
+});
 
 themeToggle.addEventListener('change', () => {
   applyTheme(themeToggle.checked ? 'light' : 'dark');
 });
 
 applyTheme(localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark');
+buildStartLevelOptions();
+setStartLevel(Number(localStorage.getItem(START_LEVEL_KEY)) || 1);
 
 init();
