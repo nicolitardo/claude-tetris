@@ -24,7 +24,9 @@ No hay build ni watch: guardar el archivo y recargar el navegador.
 
 ### Alineación de índices (crítico)
 
-`PIECES[t]` y `COLORS[t]` comparten el mismo índice `t` de 1 a 7, y **ambos arrays tienen `null` en la posición 0** para que `0` signifique "celda vacía". Las matrices de cada pieza están rellenas con su propio número de tipo (la T contiene `3`, la S contiene `4`…), no con `1`. Ese número se copia tal cual al tablero en `merge()` y `drawBlock()` lo usa como índice de color. Al añadir o reordenar piezas hay que mantener las tres cosas sincronizadas: posición en `PIECES`, valor dentro de la matriz, y color en `COLORS`.
+`PIECES[t]` y `COLORS[t]` comparten el mismo índice `t` de 1 a 8, y **ambos arrays tienen `null` en la posición 0** para que `0` signifique "celda vacía". Las matrices de cada pieza están rellenas con su propio número de tipo (la T contiene `3`, la S contiene `4`…), no con `1`. Ese número se copia tal cual al tablero en `merge()` y `drawBlock()` lo usa como índice de color. Al añadir o reordenar piezas hay que mantener las tres cosas sincronizadas: posición en `PIECES`, valor dentro de la matriz, color en `COLORS`, y el rango de `randomPiece()` (`Math.random() * 8`).
+
+El tipo `8` es la **tuerca**: un anillo 3×3 cuyo `0` central es el agujero, no relleno sobrante. Es la única pieza con un hueco interior; deja un agujero de una celda al fijarse y es simétrica bajo `rotateCW()`, así que rotarla nunca cambia nada.
 
 ### Tablero y render
 
