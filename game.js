@@ -28,6 +28,10 @@ const START_LEVEL_KEY = 'tetris-start-level';
 // Teclas que el juego consume; se bloquean mientras el menú está abierto.
 const GAME_KEYS = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyX'];
 
+// Cuenta atrás al reanudar: evita que la pieza caiga antes de que el jugador reaccione.
+const RESUME_STEPS = 3;
+const RESUME_STEP_MS = 700;
+
 const SKIN_KEY = 'tetris-skin';
 
 /* ---------- Utilidades de color ---------- */
@@ -201,7 +205,12 @@ const pausePanel = document.getElementById('pause-panel');
 const resumeBtn = document.getElementById('resume-btn');
 const menuRestartBtn = document.getElementById('menu-restart-btn');
 const controlsBtn = document.getElementById('controls-btn');
+const exitBtn = document.getElementById('exit-btn');
 const menuControls = document.getElementById('menu-controls');
+const pauseScoreEl = document.getElementById('pause-score');
+const pauseLinesEl = document.getElementById('pause-lines');
+const pauseLevelEl = document.getElementById('pause-level');
+const pauseComboEl = document.getElementById('pause-combo');
 const startLevelSelect = document.getElementById('start-level');
 const startScreen = document.getElementById('start-screen');
 const startBtn = document.getElementById('start-btn');
@@ -219,6 +228,8 @@ let theme = 'dark';
 let startLevel = 1;
 // Partida terminada que todavía no se guardó en la tabla (null si no entró al top).
 let pendingScore = null;
+// Timer de la cuenta atrás de reanudación; null cuando no hay cuenta en curso.
+let countdownId = null;
 let skin = DEFAULT_SKIN;
 
 function applyTheme(t) {
@@ -592,31 +603,113 @@ function endGame() {
   if (pos) playerNameInput.focus();
 }
 
-function pauseGame() {
-  if (gameOver || paused) return;
-  paused = true;
-  cancelAnimationFrame(animId);
+function updatePauseStats() {
+  pauseScoreEl.textContent = score.toLocaleString();
+  pauseLinesEl.textContent = lines;
+  pauseLevelEl.textContent = level;
+  pauseComboEl.textContent = maxCombo;
+}
+
+function showPauseMenu() {
   toggleMenuControls(false);
   startLevelSelect.value = String(startLevel);
+  updatePauseStats();
   showPanel(pausePanel);
   resumeBtn.focus();
 }
 
+function pauseGame() {
+  if (gameOver || paused) return;
+  paused = true;
+  cancelAnimationFrame(animId);
+  showPauseMenu();
+}
+
+// Pausa provocada por el navegador (cambio de pestaña o pérdida de foco).
+function autoPause() {
+  if (gameOver) return;
+  // Si la cuenta atrás siguiera corriendo de fondo, el juego se reanudaría sin nadie mirando.
+  if (countdownId !== null) cancelResume();
+  else pauseGame();
+}
+
+function drawCountdown(n) {
+  draw();
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 96px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(n), canvas.width / 2, canvas.height / 2);
+  ctx.restore();
+}
+
+function stopCountdown() {
+  if (countdownId === null) return;
+  clearInterval(countdownId);
+  countdownId = null;
+}
+
+// Durante la cuenta atrás `paused` sigue en true: el bucle no corre y el
+// handler de teclado sigue descartando las teclas del juego.
+function startCountdown() {
+  let left = RESUME_STEPS;
+  drawCountdown(left);
+  countdownId = setInterval(() => {
+    left--;
+    if (left > 0) {
+      drawCountdown(left);
+      return;
+    }
+    stopCountdown();
+    paused = false;
+    lastTime = performance.now();
+    dropAccum = 0;
+    loop(lastTime);
+  }, RESUME_STEP_MS);
+}
+
+// Aborta la cuenta atrás y devuelve al menú, sin la veladura del número.
+function cancelResume() {
+  stopCountdown();
+  draw();
+  showPauseMenu();
+}
+
 function resumeGame() {
-  if (gameOver || !paused) return;
-  paused = false;
+  if (gameOver || !paused || countdownId !== null) return;
   hideOverlay();
   // Sin blur, la tecla Space del juego reactivaría el botón que quedó enfocado.
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-  lastTime = performance.now();
-  dropAccum = 0;
-  loop(lastTime);
+  startCountdown();
+}
+
+function exitToStart() {
+  stopCountdown();
+  cancelAnimationFrame(animId);
+  paused = false;
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  boot();
 }
 
 function togglePause() {
   if (gameOver) return;
-  if (paused) resumeGame();
+  if (countdownId !== null) cancelResume();
+  else if (paused) resumeGame();
   else pauseGame();
+}
+
+// Mueve el foco entre los botones visibles del menú (dir: -1 arriba, 1 abajo).
+function moveMenuFocus(dir) {
+  const btns = Array.from(pausePanel.querySelectorAll('.menu-btn'));
+  if (!btns.length) return;
+  const i = btns.indexOf(document.activeElement);
+  const next = i === -1
+    ? (dir > 0 ? 0 : btns.length - 1)
+    : (i + dir + btns.length) % btns.length;
+  btns[next].focus();
 }
 
 function loop(ts) {
@@ -639,6 +732,7 @@ function loop(ts) {
 }
 
 function init() {
+  stopCountdown();
   board = createBoard();
   score = 0;
   lines = 0;
@@ -680,6 +774,7 @@ function buildStartLevelOptions() {
 
 // Pantalla de inicio: tablero vacío, sin bucle corriendo, records a la vista.
 function boot() {
+  stopCountdown();
   board = createBoard();
   score = 0;
   lines = 0;
@@ -705,6 +800,15 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (paused || gameOver) {
+    // Navegación con flechas por el menú de pausa. Se excluye el <select> de nivel
+    // para no robarle las flechas, que ahí cambian la opción.
+    const enSelect = e.target instanceof HTMLElement && e.target.tagName === 'SELECT';
+    if (paused && countdownId === null && !pausePanel.classList.contains('hidden') && !enSelect &&
+        (e.code === 'ArrowUp' || e.code === 'ArrowDown')) {
+      e.preventDefault();
+      moveMenuFocus(e.code === 'ArrowDown' ? 1 : -1);
+      return;
+    }
     // Menú abierto: se descartan las teclas del juego para no mover la pieza al volver.
     // Los controles del menú, de la pantalla de inicio y del panel lateral (botones,
     // select, input) conservan su comportamiento nativo.
@@ -739,6 +843,13 @@ restartBtn.addEventListener('click', init);
 menuRestartBtn.addEventListener('click', init);
 resumeBtn.addEventListener('click', resumeGame);
 controlsBtn.addEventListener('click', () => toggleMenuControls());
+exitBtn.addEventListener('click', exitToStart);
+
+// Pausa automática al cambiar de pestaña o minimizar: la partida no sigue sin nadie delante.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) autoPause();
+});
+window.addEventListener('blur', autoPause);
 startBtn.addEventListener('click', init);
 resetRecordsBtn.addEventListener('click', resetRecords);
 saveRecordBtn.addEventListener('click', saveCurrentRecord);
