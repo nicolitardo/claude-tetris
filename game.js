@@ -197,14 +197,16 @@ function drawGrid() {
   }
 }
 
-function draw() {
+function drawBoardOnly() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
-
-  // board
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
       drawBlock(ctx, c, r, board[r][c], BLOCK);
+}
+
+function draw() {
+  drawBoardOnly();
 
   // ghost
   const gy = ghostY();
@@ -233,6 +235,7 @@ function drawNext() {
 function endGame() {
   gameOver = true;
   cancelAnimationFrame(animId);
+  drawBoardOnly();
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
@@ -253,6 +256,7 @@ function togglePause() {
 }
 
 function loop(ts) {
+  if (gameOver || paused) return;
   const dt = ts - lastTime;
   lastTime = ts;
   dropAccum += dt;
@@ -262,6 +266,8 @@ function loop(ts) {
       current.y++;
     } else {
       lockPiece();
+      // lockPiece -> spawn -> endGame puede terminar la partida a mitad del frame
+      if (gameOver) return;
     }
   }
   draw();
