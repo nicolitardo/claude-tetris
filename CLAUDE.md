@@ -80,9 +80,13 @@ La tabla se renderiza **dos veces** (pantalla de inicio y panel de game over) po
 
 ### Menú de pausa
 
-`P` o `Escape` llaman a `togglePause()`, que delega en `pauseGame()` / `resumeGame()`. El menú ofrece Reanudar, Reiniciar (`init()`), Ver controles (despliegue in-situ vía `toggleMenuControls()`) y el selector de nivel inicial.
+`P` o `Escape` llaman a `togglePause()`, que delega en `pauseGame()` / `resumeGame()` / `cancelResume()`. El menú ofrece Reanudar, Reiniciar (`init()`), Ver controles (despliegue in-situ vía `toggleMenuControls()`), Salir al inicio (`exitToStart()` → `boot()`), el resumen de la partida en curso (`updatePauseStats()`) y el selector de nivel inicial. `showPauseMenu()` es el punto único que prepara y muestra el panel; `pauseGame()` y `cancelResume()` lo reutilizan.
 
-Dos detalles no obvios:
+Detalles no obvios:
 
-- `resumeGame()` e `init()` hacen `document.activeElement.blur()`. Sin eso el botón del menú queda enfocado y la siguiente pulsación de `Space` (hard drop) volvería a activarlo.
+- **Cuenta atrás al reanudar** (`RESUME_STEPS = 3`, `RESUME_STEP_MS = 700`): `resumeGame()` esconde el overlay y arranca `startCountdown()`, pero **`paused` sigue en `true` hasta el último tick**. De eso depende que el bucle no corra y que el handler de `keydown` siga descartando las teclas del juego durante la cuenta. `countdownId !== null` es el flag de "cuenta en curso": `resumeGame()` sale si ya hay una, y `togglePause()` la aborta con `cancelResume()`. Todo camino que cambie de estado (`init()`, `boot()`, `exitToStart()`) llama a `stopCountdown()` para no dejar el `setInterval` vivo.
+- `drawCountdown()` pinta `draw()` + veladura + número sobre el canvas, entre `ctx.save()`/`ctx.restore()`. No hay elemento DOM para el número, así que un `redraw()` (cambio de skin/tema a mitad de cuenta) lo borra hasta el siguiente tick.
+- **Auto-pausa**: `visibilitychange` (con `document.hidden`) y `blur` de `window` llaman a `autoPause()`, que aborta la cuenta atrás si la hay y si no pausa. Sin el caso de la cuenta, cambiar de pestaña justo al reanudar dejaría la partida arrancando de fondo.
+- `resumeGame()`, `exitToStart()` e `init()` hacen `document.activeElement.blur()`. Sin eso el botón del menú queda enfocado y la siguiente pulsación de `Space` (hard drop) volvería a activarlo.
 - El handler de `keydown` descarta las teclas de `GAME_KEYS` mientras `paused || gameOver`, y además hace `preventDefault()` **solo si el evento no viene de un control de UI**: `#overlay`, `#start-screen` o cualquier `button`/`select`/`input`/`textarea` (el selector de skin del panel lateral vive fuera de los dos overlays). Sin esa excepción, `Space` y las flechas dejarían de funcionar sobre esos controles, que es justo cuando la partida está pausada o terminada.
+- Antes de ese filtro, con el panel de pausa visible y sin cuenta atrás, `↑`/`↓` mueven el foco entre los `.menu-btn` (`moveMenuFocus()`). Se excluye el `<select>` de nivel para no robarle las flechas. `Enter` no necesita código: es el comportamiento nativo del `<button>` enfocado. Como el foco se mueve por código, `style.css` marca `.menu-btn:focus` además de `:focus-visible`.

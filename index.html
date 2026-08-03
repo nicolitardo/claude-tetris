@@ -87,10 +87,18 @@
         <div id="pause-panel" class="panel-box hidden">
           <p class="menu-title">PAUSA</p>
 
+          <div class="menu-stats">
+            <span>Puntuación <b id="pause-score">0</b></span>
+            <span>Líneas <b id="pause-lines">0</b></span>
+            <span>Nivel <b id="pause-level">1</b></span>
+            <span>Mejor combo <b id="pause-combo">0</b></span>
+          </div>
+
           <div class="menu-actions">
             <button id="resume-btn" class="menu-btn">Reanudar</button>
             <button id="menu-restart-btn" class="menu-btn">Reiniciar</button>
             <button id="controls-btn" class="menu-btn" aria-expanded="false" aria-controls="menu-controls">Ver controles</button>
+            <button id="exit-btn" class="menu-btn">Salir al inicio</button>
           </div>
 
           <div id="menu-controls" class="menu-controls hidden">
@@ -100,6 +108,7 @@
               <li><kbd>↓</kbd><span>Bajar (soft drop)</span></li>
               <li><kbd>Space</kbd><span>Caída instantánea</span></li>
               <li><kbd>P</kbd><kbd>Esc</kbd><span>Pausa / reanudar</span></li>
+              <li><kbd>↑</kbd><kbd>↓</kbd><kbd>Enter</kbd><span>Navegar este menú</span></li>
             </ul>
           </div>
 
@@ -108,6 +117,7 @@
             <select id="start-level"></select>
           </div>
           <p class="menu-note">Se aplica al empezar una nueva partida.</p>
+          <p class="menu-note">Al reanudar hay una cuenta atrás de 3 antes de seguir.</p>
         </div>
       </div>
     </div>
