@@ -238,3 +238,77 @@ kbd {
 #restart-btn:hover {
   background: var(--restart-hover-bg);
 }
+
+/* ---- Selector de skin ---- */
+.skin-select {
+  width: 100%;
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  color: var(--value-color);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.skin-select:hover {
+  border-color: var(--value-color);
+}
+
+.skin-select:focus {
+  outline: none;
+  border-color: var(--value-color);
+}
+
+.skin-select option {
+  background: var(--kbd-bg);
+  color: var(--fg);
+}
+
+/* ---- Skins (se combinan con el tema claro/oscuro) ---- */
+body.skin-neon {
+  --board-bg: #05050a;
+  --board-border: #00f5ff;
+}
+
+body.skin-neon:not(.light) {
+  --bg: #05050a;
+}
+
+body.skin-neon #board {
+  box-shadow: 0 0 34px rgba(0, 245, 255, 0.35);
+}
+
+body.skin-pastel {
+  --board-bg: #2b2733;
+  --board-border: #6d6480;
+}
+
+body.skin-pastel.light {
+  --board-bg: #f7f2fa;
+  --board-border: #ddd2e6;
+}
+
+body.skin-pastel #board {
+  box-shadow: 0 0 30px rgba(180, 160, 200, 0.25);
+}
+
+body.skin-pixel {
+  --board-bg: #14141c;
+  --board-border: #6b7a8f;
+}
+
+body.skin-pixel.light {
+  --board-bg: #dfe4ea;
+  --board-border: #6b7a8f;
+}
+
+body.skin-pixel #board,
+body.skin-pixel #next-canvas {
+  border-radius: 0;
+  image-rendering: pixelated;
+}
