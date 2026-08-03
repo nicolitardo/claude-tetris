@@ -58,6 +58,24 @@
         <div id="gameover-panel" class="panel-box">
           <p id="overlay-title">GAME OVER</p>
           <p id="overlay-score"></p>
+
+          <div id="name-form" class="name-form hidden">
+            <label id="name-form-label" for="player-name">¡Entraste al top! Tu nombre:</label>
+            <div class="name-form-row">
+              <input id="player-name" type="text" maxlength="12" placeholder="Jugador" autocomplete="off" />
+              <button id="save-record-btn">Guardar</button>
+            </div>
+          </div>
+
+          <div class="records" id="overlay-records">
+            <p class="records-title">RECORDS</p>
+            <ol class="records-list"></ol>
+            <div class="records-stats">
+              <span>Mejor combo: <b class="records-best-combo">0</b></span>
+              <span>Líneas máx.: <b class="records-max-lines">0</b></span>
+            </div>
+          </div>
+
           <button id="restart-btn">Reiniciar</button>
         </div>
 
@@ -86,6 +104,24 @@
           </div>
           <p class="menu-note">Se aplica al empezar una nueva partida.</p>
         </div>
+      </div>
+    </div>
+
+    <div id="start-screen" class="overlay hidden">
+      <div class="overlay-box">
+        <p id="start-title">TETRIS</p>
+
+        <div class="records">
+          <p class="records-title">RECORDS</p>
+          <ol class="records-list"></ol>
+          <div class="records-stats">
+            <span>Mejor combo: <b class="records-best-combo">0</b></span>
+            <span>Líneas máx.: <b class="records-max-lines">0</b></span>
+          </div>
+        </div>
+
+        <button id="start-btn">Jugar</button>
+        <button id="reset-records-btn" class="link-btn">Resetear records</button>
       </div>
     </div>
   </div>
