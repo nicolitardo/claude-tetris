@@ -31,6 +31,8 @@
   --record-new-bg: rgba(255, 213, 79, 0.18);
   --record-new-color: #ffd54f;
   --input-bg: #1a1a25;
+  --board-radius: 4px;
+  --board-glow: 0 0 40px rgba(0, 0, 0, 0.6);
 }
 
 body.light {
@@ -60,6 +62,35 @@ body.light {
   --record-new-bg: rgba(230, 150, 0, 0.2);
   --record-new-color: #b26a00;
   --input-bg: #ffffff;
+}
+
+/* ---- Skins ----
+   Van después de body.light: misma especificidad, gana la última regla,
+   así el skin manda sobre los colores del tema. */
+body.skin-neon {
+  --bg: #05050c;
+  --fg: #e8f7ff;
+  --title-color: #00f0ff;
+  --board-border: #00f0ff;
+  --board-bg: #000000;
+  --value-color: #00f0ff;
+  --board-glow: 0 0 24px rgba(0, 240, 255, 0.45);
+}
+
+body.skin-pastel {
+  --board-border: #d8d2e6;
+  --board-bg: #f7f4fb;
+  --board-radius: 12px;
+}
+
+body.skin-pastel:not(.light) {
+  --board-bg: #262233;
+  --board-border: #3d3550;
+}
+
+body.skin-pixel {
+  --board-radius: 0px;
+  --board-border: #6a6a85;
 }
 
 body {
@@ -97,8 +128,9 @@ body {
   display: block;
   border: 1px solid var(--board-border);
   background: var(--board-bg);
-  border-radius: 4px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  border-radius: var(--board-radius);
+  box-shadow: var(--board-glow);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 /* ---- Panel lateral ---- */
@@ -135,7 +167,24 @@ body {
   display: block;
   border: 1px solid var(--board-border);
   background: var(--board-bg);
+  border-radius: var(--board-radius);
+}
+
+/* ---- Selector de skin ---- */
+#skin-select {
+  width: 100%;
+  background: var(--kbd-bg);
+  color: var(--fg);
+  border: 1px solid var(--kbd-border);
   border-radius: 4px;
+  padding: 5px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#skin-select:focus {
+  outline: 1px solid var(--value-color);
 }
 
 /* ---- Toggle de tema ---- */
