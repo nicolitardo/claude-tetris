@@ -706,8 +706,11 @@ document.addEventListener('keydown', e => {
   }
   if (paused || gameOver) {
     // Menú abierto: se descartan las teclas del juego para no mover la pieza al volver.
-    // Los controles del propio menú (botones, select) conservan su comportamiento nativo.
-    if (GAME_KEYS.includes(e.code) && !overlay.contains(e.target)) e.preventDefault();
+    // Los controles del menú, de la pantalla de inicio y del panel lateral (botones,
+    // select, input) conservan su comportamiento nativo.
+    const inUI = overlay.contains(e.target) || startScreen.contains(e.target) ||
+      (e.target instanceof HTMLElement && /^(BUTTON|SELECT|INPUT|TEXTAREA)$/.test(e.target.tagName));
+    if (GAME_KEYS.includes(e.code) && !inUI) e.preventDefault();
     return;
   }
   switch (e.code) {
